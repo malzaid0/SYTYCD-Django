@@ -1,14 +1,16 @@
 from django.shortcuts import render, redirect
-from .models import Item
+from .models import Item, Restaurant
 from .forms import RestaurantForm, ItemForm, SignupForm, SigninForm
 from django.contrib.auth import login, authenticate, logout
 from django.db.models import Q
 
+
 def no_access(request):
     return render(request, 'no_access.html')
 
+
 def signup(request):
-    form = SignupForm
+    form = SignupForm()
     if request.method == 'POST':
         form = SignupForm(request.POST)
         if form.is_valid():
@@ -20,14 +22,15 @@ def signup(request):
             login(request, user)
             return redirect("restaurant-list")
     context = {
-        "form":form,
+        "form": form,
     }
     return render(request, 'signup.html', context)
 
+
 def signin(request):
-    form = LoginForm()
+    form = SigninForm()
     if request.method == 'POST':
-        form = LoginForm(request.POST)
+        form = SigninForm(request.POST)
         if form.is_valid():
 
             username = form.cleaned_data['username']
@@ -38,37 +41,40 @@ def signin(request):
                 login(request, auth_user)
                 return redirect('restaurant-list')
     context = {
-        "form":form
+        "form": form
     }
     return render(request, 'signin.html', context)
+
 
 def signout(request):
     logout(request)
     return redirect("signin")
+
 
 def restaurant_list(request):
     restaurants = Restaurant.objects.all()
     query = request.GET.get('q')
     if query:
         restaurants = restaurants.filter(
-            Q(name__icontains=query)|
-            Q(description__icontains=query)|
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
             Q(owner__username__icontains=query)
         ).distinct()
     context = {
-       "rest_list": restaurants
+        "restaurants": restaurants
     }
-    return render(request, 'restaurant_list.html', context)
+    return render(request, 'list.html', context)
 
 
 def restaurant_detail(request, restaurant_id):
-    restaurant = Restaurant.objects.get(id=res_id)
+    restaurant = Restaurant.objects.get(id=restaurant_id)
     items = Item.objects.filter(restaurant=restaurant)
     context = {
         "restaurant": restaurant,
         "items": items,
     }
     return render(request, 'detail.html', context)
+
 
 def restaurant_create(request):
     if request.user.is_anonymous:
@@ -82,9 +88,10 @@ def restaurant_create(request):
             restaurant.save()
             return redirect('restaurant-list')
     context = {
-        "form":form,
+        "form": form,
     }
     return render(request, 'create.html', context)
+
 
 def item_create(request, restaurant_id):
     form = ItemForm()
@@ -99,10 +106,11 @@ def item_create(request, restaurant_id):
             item.save()
             return redirect('restaurant-detail', restaurant_id)
     context = {
-        "form":form,
+        "form": form,
         "restaurant": restaurant,
     }
     return render(request, 'item_create.html', context)
+
 
 def restaurant_update(request, restaurant_id):
     restaurant_obj = Restaurant.objects.get(id=restaurant_id)
@@ -116,13 +124,14 @@ def restaurant_update(request, restaurant_id):
             return redirect('restaurant-list')
     context = {
         "restaurant_obj": restaurant_obj,
-        "form":form,
+        "form": form,
     }
     return render(request, 'update.html', context)
 
+
 def restaurant_delete(request, restaurant_id):
     restaurant_obj = Restaurant.objects.get(id=restaurant_id)
-    if not (request.user.is_staff):
+    if not request.user.is_staff:
         return redirect('no-access')
     restaurant_obj.delete()
     return redirect('restaurant-list')
